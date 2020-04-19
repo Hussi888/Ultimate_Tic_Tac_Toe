@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Random;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
@@ -30,6 +31,8 @@ public class GameBoard extends javax.swing.JFrame {
     private boolean x_o = false;
     private int winCount[] = {0, 0};
     private int selectedPanel = 0;
+    private int nextPanel = 0;
+    private int allowedPanel = 0;
     private final int panelCount = 9, buttonCount = 81; 
     private boolean[] lockPanels = new boolean[panelCount];
     private JPanel[] panels = new JPanel[panelCount];
@@ -74,6 +77,44 @@ public class GameBoard extends javax.swing.JFrame {
         }
     }
     
+    public void computeNextPanel(final JButton button) {
+        nextPanel = -1;
+        for (int i = 0; i < buttonCount; i++) {
+            if (i % 9 == 0) {
+                nextPanel = 0;
+            }
+            if (buttons[i] == button) {
+                break;
+            }
+            nextPanel++;
+        }
+        Random r = new Random();
+		
+        while (lockPanels[nextPanel] == true) {
+            nextPanel = r.nextInt((8 - 0) + 1) + 0;
+        }
+    }
+    
+    public void setAvailablePanel(final JButton button) {
+        panels[allowedPanel].setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        allowedPanel = -1;
+        for (int i = 0; i < buttonCount; i++) {
+            if (i % 9 == 0) {
+                allowedPanel = 0;
+            }
+            if (buttons[i] == button) {
+                break;
+            }
+            allowedPanel++;
+        }
+        Random r = new Random();
+		
+        while (lockPanels[allowedPanel] == true) {
+            allowedPanel = r.nextInt((8 - 0) + 1) + 0;
+        }
+        panels[allowedPanel].setBorder(BorderFactory.createLineBorder(Color.RED));
+    }
+    
     public boolean makeMove(int panelNum) {
         ArrayList<Integer> available = new ArrayList<Integer>();
         int startIndex = (panelNum)*9;
@@ -88,6 +129,7 @@ public class GameBoard extends javax.swing.JFrame {
                 if (checkWinner(panelNum, false)) {
                     buttons[i].setText(computer);
                     buttons[i].setForeground(Color.BLUE);
+                    setAvailablePanel(buttons[i]);
                     return true;
                 }
                 buttons[i].setText("");
@@ -101,6 +143,7 @@ public class GameBoard extends javax.swing.JFrame {
                 if (checkWinner(panelNum, false)) {
                     buttons[i].setText(computer);
                     buttons[i].setForeground(Color.BLUE);
+                    setAvailablePanel(buttons[i]);
                     return true;
                 }  
                 buttons[i].setText("");
@@ -116,6 +159,7 @@ public class GameBoard extends javax.swing.JFrame {
             int randomSlot = available.get(rand.nextInt(available.size()));
             buttons[randomSlot].setText(computer);
             buttons[randomSlot].setForeground(Color.BLUE);
+            setAvailablePanel(buttons[randomSlot]);
         }
         return false;
     }
@@ -125,16 +169,23 @@ public class GameBoard extends javax.swing.JFrame {
             ActionListener a1 = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent ae) {
+                boolean flag = false;
                 setSelectedPanel(button);
-                if (lockPanels[selectedPanel] != true) {
+                if (lockPanels[selectedPanel] != true && selectedPanel == allowedPanel) {
                     if (button.getText().equals("")) {    
                         button.setText(player);
                         button.setForeground(Color.RED);
-                        makeMove(selectedPanel);
+                        computeNextPanel(button);
+                        makeMove(nextPanel);
                     }
+                    if (checkWinner(selectedPanel, true))
+                        flag = true;
                     
-                    if (checkWinner(selectedPanel, true)) {
-                        lockPanels[selectedPanel] = true;
+                    if (flag || checkWinner(nextPanel, true)) {
+                        if (!flag)
+                            lockPanels[nextPanel] = true;
+                        else
+                            lockPanels[selectedPanel] = true;
   
                         //Check Panels for winning
                         if (winCount[0] > 2) {
@@ -224,7 +275,7 @@ public class GameBoard extends javax.swing.JFrame {
                         }
                         else
                             winCount[0]++;
-                }                
+                }            
                 return true;
             }
         }
